@@ -79,6 +79,12 @@ TEST_FILE_PREFIX: Final[str] = 'test_'
 # full run.
 INERT_SUFFIXES: Final[tuple[str, ...]] = ('.md', '.rst', '.pdf', '.ipynb')
 
+# Directories whose files cannot change what a test does, whatever their type.
+# `docs/` is the documentation site: Markdown and notebooks, which the suffixes
+# above already cover, and `_toc.yaml`, its table of contents, which they do
+# not. Nothing in the package, its tests or `pyproject.toml` reads from it.
+INERT_DIRS: Final[tuple[str, ...]] = ('docs/',)
+
 # The workflow this module selects shards for. Every other workflow runs on its
 # own trigger (a schedule, `workflow_run`, or by hand), and CI-Build neither
 # calls nor executes it, so running every shard tests nothing about a change to
@@ -416,9 +422,9 @@ def full_run_reason(
 ) -> str | None:
   """Why `changed` requires every shard, or `None` if it does not.
 
-  The exception is `INERT_SUFFIXES`, checked before anything else: those files
-  cannot affect a test wherever they live (think documentation). Nor can a
-  workflow other than `CI_BUILD_WORKFLOW`.
+  The exception is `INERT_SUFFIXES` and `INERT_DIRS`, checked before anything
+  else: those files cannot affect a test wherever they live (think
+  documentation). Nor can a workflow other than `CI_BUILD_WORKFLOW`.
 
   `known` is the file set the graph was built from. Changed paths absent from
   `known` represent deleted files. Most deletions do not force a full run
@@ -456,7 +462,7 @@ def full_run_reason(
     )
 
   for path in sorted(changed):
-    if path.endswith(INERT_SUFFIXES):
+    if path.endswith(INERT_SUFFIXES) or path.startswith(INERT_DIRS):
       continue
     if path.startswith(WORKFLOWS_DIR) and path != CI_BUILD_WORKFLOW:
       continue
